@@ -27,3 +27,5 @@ hermes-image-cache/
 
 # Screenshots - keep test samples but ignore auto-generated
 screenshots/README.md
+screenshots/*.jpg
+screenshots/*.png
