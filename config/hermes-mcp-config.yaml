@@ -1,0 +1,29 @@
+# Hermes MCP 配置示例
+#
+# 将此段添加到 ~/.hermes/config.yaml 中
+# 或使用 hermes mcp add 命令添加
+
+mcp_servers:
+  desktop:
+    # MCP 服务器可执行文件路径
+    command: /home/h/.hermes/venvs/rpa/bin/vadgr-cua
+
+    # ❌ 错误格式：单个字符串
+    # args: '["--transport","stdio"]'
+    #
+    # ✅ 正确格式：YAML 列表
+    args:
+      - --transport
+      - stdio
+
+    # 是否启用
+    enabled: true
+
+# 辅助视觉模型配置（如果主模型不支持视觉）
+auxiliary:
+  vision:
+    provider: auto          # 或 custom:<名称>, openrouter, anthropic
+    model: ""               # 如 "kimi-k2.6", "gpt-4o"
+    base_url: ""            # 自定义 API 端点
+    api_key: ""             # API 密钥
+    timeout: 120
