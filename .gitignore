@@ -25,7 +25,8 @@ Thumbs.db
 hermes-image-cache/
 *.log
 
-# Screenshots - keep test samples but ignore auto-generated
+# EasyOCR temp files
+screenshots/ocr_*.json
 screenshots/README.md
 screenshots/*.jpg
 screenshots/*.png

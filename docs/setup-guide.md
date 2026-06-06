@@ -205,7 +205,63 @@ cmd.exe /c "D:\新建文件夹\python.exe -c "import pyperclip; pyperclip.copy('
 
 **注意**: WSL 终端显示 pyperclip.paste() 的 repr() 可能看起来是乱码，但这是 WSL 终端编码问题，实际剪贴板内容是正确的。验证方法是用 `CLIPBOARD_OK` 判断。
 
-**自动化脚本**: 见 `scripts/chinese_input.py` 和 `scripts/rpa_daemon.py` 中的 `type_cn()` 方法。
+详见 `scripts/chinese_input.py` 和 `scripts/rpa_daemon.py` 的 `type_cn()` 方法。
+
+---
+
+## EasyOCR 中文文字提取
+
+### 安装
+
+```bash
+# Windows 端安装 EasyOCR
+cmd.exe /c "D:\新建文件夹\python.exe -m pip install easyocr"
+
+# 首次运行会下载模型文件（~200MB），后续缓存使用
+```
+
+### 使用（WSL 端）
+
+```bash
+# 快捷命令
+python3 ~/.local/bin/easyocr /path/to/screenshot.jpg
+
+# 输出纯 UTF-8 JSON，中文无误
+```
+
+### 推荐工作流
+
+```bash
+# 1. MCP 截图区域
+mcp_desktop_screenshot_region(x=360, y=157, width=444, height=577)
+
+# 2. WSL 端调用 EasyOCR
+python3 ~/.local/bin/easyocr /home/h/.hermes/image_cache/img_xxx.jpg
+
+# 3. 过滤置信度 ≥60% 的结果
+python3 ~/.local/bin/easyocr 截图.jpg | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for d in data:
+    if d['conf'] >= 60:
+        print(f'{d[\"text\"]} ({d[\"conf\"]}%)')
+"
+```
+
+### 原理
+
+WSL wrapper `easyocr_reader.py` → Windows Python 跑 EasyOCR → 写 UTF-8 JSON 文件 → WSL 用 `read_file` 读取（不走 terminal 管道，解决中文乱码）。
+
+### EasyOCR vs Tesseract 对比
+
+| 评估维度 | EasyOCR | Tesseract 5.3.4 |
+|---------|---------|----------------|
+| 中文 UI 文字准确率 | **~80-99%** | ~30-40% |
+| 安装体积 | ~500MB (含 PyTorch) | ~50MB |
+| 速度 | 慢（CPU 1-3s） | 快（<0.5s） |
+| 推荐场景 | 中文联系人名、小字 | 英文、大标题、快速验证 |
+
+详见 `scripts/easyocr_runner.py`。
 
 ---
 

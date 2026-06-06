@@ -176,6 +176,76 @@ Daemon 直连: 坐标范围 0-2560 x 0-1600
 }
 ```
 
+## WeChat 布局公式架构 (2026-06-06)
+
+WeChat 4.x (Qt) 不暴露 UIA 控件，无法用 pywinauto/wxauto 获取内部元素。
+有效方案：**pygetwindow 定位窗口 → 固定公式反推所有 UI 坐标**。
+
+### 布局常量
+
+```
+LEFTBAR_W = 60       # 左侧导航栏（固定像素）
+TITLEBAR_H = 50      # 顶部标题栏
+CONTACT_ITEM_H = 64  # 每个联系人条目高度
+INPUT_H = 60         # 输入框区域高度
+SEND_BTN_W = 50      # 发送按钮宽度
+LIST_W = 240~400     # 会话列表宽度（窗口宽度的 33%，钳位）
+```
+
+### 坐标公式
+
+```python
+# 设窗口左=lx, 上=ty, 宽=w, 高=h
+chat_x = lx + LEFTBAR_W + LIST_W
+chat_w = w - LEFTBAR_W - LIST_W
+
+搜索框   = (lx+LBF_W+8,   ty+8,            LIST_W-16, 38)
+输入框   = (chat_x+8,     ty+h-68,         chat_w-70, 50)
+发送按钮 = (lx+w-62,      ty+h-54,         50,        34)
+聊天区   = (chat_x,       ty+50,           chat_w,    h-110)
+会话列表 = (lx+LBF_W,     ty+50,           LIST_W,    h-50)
+```
+
+### 搜索框优先策略
+
+不点击联系人列表（列表随新消息置顶，顺序不稳定），而是：
+1. 点击搜索框（固定坐标）
+2. 粘贴群名（pyperclip + Ctrl+V）
+3. Enter → 打开指定会话
+
+### 校准一次，永久使用
+
+```python
+import pygetwindow as gw, json
+wx = gw.getWindowsWithTitle("微信")[0]
+calib = {"left": wx.left, "top": wx.top, "width": wx.width, "height": wx.height}
+json.dump(calib, open("wx_calib.json", "w"))
+# 窗口不移位，永久复用
+```
+
+### 数据流
+
+```python
+pygetwindow         # 获取窗口坐标 (30ms)
+  → 公式反推         # 计算所有 UI 坐标 (0ms)
+    → 点击搜索框      # 固定坐标，不受列表顺序影响
+      → 粘贴群名     # pyperclip + Ctrl+V
+        → Enter     # 打开会话
+          → 粘贴内容 # pyperclip + Ctrl+V
+            → 发送  # 点击发送按钮
+```
+
+### 优势
+
+| 对比项 | vision 方案 | 布局公式方案 |
+|--------|-----------|------------|
+| 耗时 | 3-5s/步 | <50ms/步 |
+| 成本 | 每次 vision API 费用 | 0 |
+| 可靠性 | 依赖模型识别精度 | 100%（坐标固定） |
+| 列表顺序 | 必须 OCR 读 | 搜索框不受影响 |
+
+---
+
 ## 安全边界
 
 | 层级 | 保护措施 |
